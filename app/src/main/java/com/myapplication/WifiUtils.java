@@ -9,20 +9,12 @@ import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
 
-import com.realtek.simpleconfiglib.SCLibrary;
 import com.myapplication.ConfigurationDevice.DeviceInfo;
-
-import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
+import com.realtek.simpleconfiglib.SCLibrary;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-
-import io.reactivex.BackpressureStrategy;
-import io.reactivex.Flowable;
-import io.reactivex.FlowableEmitter;
-import io.reactivex.FlowableOnSubscribe;
 
 /**
  * Created by Administrator on 2017/3/13.
@@ -30,7 +22,7 @@ import io.reactivex.FlowableOnSubscribe;
 
 public class WifiUtils {
     List<DeviceInfo> configuredDevices = new ArrayList<>();
-    public static SCLibrary SCLib = new SCLibrary();
+    private static SCLibrary SCLib = new SCLibrary();
     private WifiController wifiController;
     private Context context;
     private String wifiPassword;
@@ -52,6 +44,7 @@ public class WifiUtils {
         SCLib.TreadMsgHandler = new MsgHandler();
         SCLib.WifiInit(context);
     }
+
 
     /**
      * 获取SSID
@@ -123,7 +116,11 @@ public class WifiUtils {
         return configuredDevices;
     }
 
-    public void setConfigure() {
+    ConfiguredListener listener;
+    public void setConfigure(ConfiguredListener listener) {
+        if(listener!=null){
+            this.listener=listener;
+        }
         WifiManager wifiManager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
         WifiInfo info = wifiManager.getConnectionInfo();
         //get wifi ip
@@ -231,14 +228,19 @@ public class WifiUtils {
             switch (msg.what) {
                 case ~CfgSuccessACK://Config Timeout
                     Log.d("MsgHandler", "Config Timeout");
+                    listener.Error(1,"配置超时");
                     SCLib.rtk_sc_stop();
                     break;
                 case CfgSuccessACK: //Not Showable
                     Log.d("MsgHandler", "Config SuccessACK");
                     SCLib.rtk_sc_stop();
+                    List<HashMap<String, Object>> infoList = new ArrayList<>();
+                    SCLib.rtk_sc_get_connected_sta_info(infoList);
+                    if(listener!=null){
+                        listener.Success(infoList);
+                    }
                     configFlag=true;
-                    List<HashMap<String, Object>> InfoList = new ArrayList<>();
-                    SCLib.rtk_sc_get_connected_sta_info(InfoList);
+
                     break;
                 default:
                     Log.d("MsgHandler", "default");
@@ -246,20 +248,6 @@ public class WifiUtils {
             }
         }
     }
-    public void aVoid() {
-        Subscriber subscriber= new RXImpl();
-
-        Flowable.create(new FlowableOnSubscribe<Boolean>() {
-            @Override
-            public void subscribe(FlowableEmitter<Boolean> e) throws Exception {
-                configFlag=true;
-            }
-        }, BackpressureStrategy.BUFFER)
-
-                .subscribe(subscriber);
-
-    }
-
 
 
 }

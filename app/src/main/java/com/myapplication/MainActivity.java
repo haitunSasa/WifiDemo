@@ -13,17 +13,10 @@ import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
 
-import org.reactivestreams.Subscriber;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
-
-import io.reactivex.BackpressureStrategy;
-import io.reactivex.Flowable;
-import io.reactivex.FlowableEmitter;
-import io.reactivex.FlowableOnSubscribe;
 
 public class MainActivity extends Activity {
 
@@ -105,7 +98,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
-        wifiUtils.SCLib.rtk_sc_exit();
+        wifiUtils.exit();
         super.onDestroy();
     }
 
@@ -150,7 +143,7 @@ public class MainActivity extends Activity {
                 dialog.dismiss();
                 ConfigureAPProFlag = false;
                 TimesupFlag_cfg = true;
-                wifiUtils.SCLib.rtk_sc_stop();
+                wifiUtils.stopSCLibrary();
                 backgroundThread.interrupt();
             }
         });
@@ -180,17 +173,17 @@ public class MainActivity extends Activity {
                     handler_pd.sendEmptyMessage(0);
                 }
 
-                runOnUiThread(new Runnable() {
+               /* runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
                         if (ConfigureAPProFlag == true) {
                             //show "start to configure"
                             ConfigureAPProFlag = false;
                             Log.i("showConfiguredList", "showConfiguredList");
-                            showConfiguredList();
+
                         }
                     }
-                });
+                });*/
             }
         };
         ConfigDeviceThread.start();
@@ -200,11 +193,23 @@ public class MainActivity extends Activity {
     private void Configure_action() {
         Log.i("Configure_action", "Configure_action");
         int stepOneTimeout = 30000;
-        wifiUtils.setConfigure();
+        wifiUtils.setConfigure(new ConfiguredListener() {
+            @Override
+            public void Success(List<HashMap<String, Object>> infoList) {
+                Log.i("Configure_action", "Configure_action");
+                showConfiguredList();
+            }
+
+            @Override
+            public void Error(int errCode, String cause) {
+                Log.i("errCode", errCode+"");
+                Log.i("cause", cause);
+            }
+        });
 
         TimesupFlag_cfg = false;
 
-        int watchCount = 0;
+/*        int watchCount = 0;
         try {
             do {
                 Thread.sleep(1000);
@@ -213,7 +218,7 @@ public class MainActivity extends Activity {
 
         } catch (InterruptedException e) {
             e.printStackTrace();
-        }
+        }*/
 
         //==================== 2 =========================
         if (TimesupFlag_cfg == false) {
@@ -306,35 +311,5 @@ public class MainActivity extends Activity {
             pd.setMessage("Waiting for the device");
         }
     };
-
-
-
-   /* *//**
-     * Handler class to receive send/receive message
-     *//*
-    private class MsgHandler extends Handler {
-        @Override
-        public void handleMessage(Message msg) {
-            Log.d(TAG, "msg.what: " + msg.what);
-            switch (msg.what) {
-                case ~SCCtlOps.Flag.CfgSuccessACK://Config Timeout
-                    Log.d("MsgHandler", "Config Timeout");
-                    wifiUtils.SCLib.rtk_sc_stop();
-                    break;
-                case SCCtlOps.Flag.CfgSuccessACK: //Not Showable
-                    Log.d("MsgHandler", "Config SuccessACK");
-                    wifiUtils.SCLib.rtk_sc_stop();
-                    TimesupFlag_cfg = true;
-                    if (ShowCfgSteptwo)
-                        runOnUiThread(Cfg_changeMessage);
-                    List<HashMap<String, Object>> InfoList = new ArrayList<>();
-                    wifiUtils.SCLib.rtk_sc_get_connected_sta_info(InfoList);
-                    break;
-                default:
-                    Log.d("MsgHandler", "default");
-                    break;
-            }
-        }
-    }*/
 }
 
